@@ -5,14 +5,14 @@ dotenv.config({ path: path.join(__dirname, '..', 'config', 'config.env') });
 
 const MAX_RETRIES = 5; // Maximum retry attempts
 
-const OtpError = async () => {
+const NoSellerDetailFoundError = async () => {
   let client = null;
   let attempts = 0;
 
   while (attempts < MAX_RETRIES) {
     try {
       attempts++;
-      console.log(`Attempt ${attempts} to process Otp Error stats...`);
+      console.log(`Attempt ${attempts} to process Verify NoSellerDetailFoundError Error stats...`);
 
       // Database connection setup
       const dbConfig = {
@@ -44,31 +44,31 @@ const OtpError = async () => {
       const validOrgQueryRows = validOrgQueryResult.rows;
 
       if (validOrgQueryRows.length === 0) {
-        console.log('No valid orgIds found for Login Error.');
+        console.log('No valid orgIds found for NoSellerDetailFoundError  Error.');
         return;
       }
 
       const orgIds = validOrgQueryRows.map(row => row.org_id);
 
-      // Step 2: Otp Error Query
-      const otpErrorQuery = `
+      // Step 2: Verify Otp Error Query
+      const NoSellerDetailFoundErrorQuery = `
         SELECT requestid, orgid, channel, status, message, sources
         FROM "fs-sync-requests-db"
         WHERE 
           createdAt > (CURRENT_DATE - INTERVAL '1 day') + INTERVAL '18:30' 
           AND createdby='cron' 
           AND orgid = ANY($1)
-          AND (message like '%dashboard.auth.getFeaturesForSeller%')
+          AND (message::text LIKE '%No seller details found for orgId%')
         ORDER BY createdAt ASC;
       `;
 
-      const otpErrorQueryResult = await client.query(otpErrorQuery, [orgIds]);
+      const NoSellerDetailFoundErrorQueryResult = await client.query(NoSellerDetailFoundErrorQuery, [orgIds]);
 
       // Log results to the terminal
-      console.log(`OTP Error`);
-      console.table(otpErrorQueryResult.rows.map(row => ({
+      console.log(`No Seller Detail Found Error`);
+      console.table(NoSellerDetailFoundErrorQueryResult.rows.map(row => ({
         OrgId: row.orgid,
-        Channel: row.channel
+        Message: row.message,
       })));
 
       // If successful, break out of the loop
@@ -93,4 +93,4 @@ const OtpError = async () => {
   }
 };
 
-module.exports = OtpError;
+module.exports = NoSellerDetailFoundError;

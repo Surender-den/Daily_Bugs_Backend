@@ -5,14 +5,14 @@ dotenv.config({ path: path.join(__dirname, '..', 'config', 'config.env') });
 
 const MAX_RETRIES = 5; // Maximum retry attempts
 
-const OtpError = async () => {
+const JiomartLoginError = async () => {
   let client = null;
   let attempts = 0;
 
   while (attempts < MAX_RETRIES) {
     try {
       attempts++;
-      console.log(`Attempt ${attempts} to process Otp Error stats...`);
+      console.log(`Attempt ${attempts} to process Jiomart Login Error stats...`);
 
       // Database connection setup
       const dbConfig = {
@@ -35,8 +35,9 @@ const OtpError = async () => {
         FROM "fs-organisations-channels-db" AS org
         JOIN organisation AS i ON org.orgid = i.org_id 
         WHERE 
-           isSyncDisabled IS NOT TRUE
+           isSyncDisabled IS NOT TRUE 
           AND (isDisabled != TRUE OR isDisabled IS NULL)
+          AND  orgid not in (10)
           AND (isDisconnected != TRUE OR isDisconnected IS NULL);
       `;
 
@@ -44,38 +45,40 @@ const OtpError = async () => {
       const validOrgQueryRows = validOrgQueryResult.rows;
 
       if (validOrgQueryRows.length === 0) {
-        console.log('No valid orgIds found for Login Error.');
+        console.log('No valid orgIds found for Jiomart Login Error.');
         return;
       }
 
       const orgIds = validOrgQueryRows.map(row => row.org_id);
 
-      // Step 2: Otp Error Query
-      const otpErrorQuery = `
-        SELECT requestid, orgid, channel, status, message, sources
-        FROM "fs-sync-requests-db"
-        WHERE 
-          createdAt > (CURRENT_DATE - INTERVAL '1 day') + INTERVAL '18:30' 
-          AND createdby='cron' 
-          AND orgid = ANY($1)
-          AND (message like '%dashboard.auth.getFeaturesForSeller%')
-        ORDER BY createdAt ASC;
+      // Step 2: Login Login Error Query
+      const JiomartLoginErrorQuery = `
+        SELECT orgid, channel, report_type, status ,message
+      FROM fs_upload
+      WHERE created_at > (CURRENT_DATE - INTERVAL '1 day') + INTERVAL '14:30'
+        AND orgid = ANY($1)
+        AND channel = 'Jiomart'
+        AND report_type = 'Automation'
+        AND message like '%Login failed%'
+        
+       
       `;
 
-      const otpErrorQueryResult = await client.query(otpErrorQuery, [orgIds]);
+      const JiomartLoginErrorQueryResult = await client.query(JiomartLoginErrorQuery, [orgIds]);
 
       // Log results to the terminal
-      console.log(`OTP Error`);
-      console.table(otpErrorQueryResult.rows.map(row => ({
+      console.log(`Jiomart Login Error`);
+      console.table(JiomartLoginErrorQueryResult.rows.map(row => ({
         OrgId: row.orgid,
-        Channel: row.channel
+        Channel: row.channel,
+        // Message: row.message
       })));
 
       // If successful, break out of the loop
       break;
 
     } catch (error) {
-      console.error(`Error occurred on attempt ${attempts}:`,error.message);
+      console.error(`Error occurred on attempt ${attempts}:`, error.message);
 
       if (attempts >= MAX_RETRIES) {
         console.error('Max retry attempts reached. Exiting process.');
@@ -93,4 +96,4 @@ const OtpError = async () => {
   }
 };
 
-module.exports = OtpError;
+module.exports = JiomartLoginError;

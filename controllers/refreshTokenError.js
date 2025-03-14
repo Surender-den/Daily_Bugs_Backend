@@ -58,7 +58,7 @@ const RefreshTokenError = async () => {
           createdAt > (CURRENT_DATE - INTERVAL '1 day') + INTERVAL '18:30' 
           AND createdby='cron' 
           AND orgid = ANY($1)
-          AND message::text LIKE '%refresh%'
+          AND message::text LIKE '%spapi.auth.refreshToken%'
         ORDER BY createdAt ASC;
       `;
 

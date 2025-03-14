@@ -5,14 +5,14 @@ dotenv.config({ path: path.join(__dirname, '..', 'config', 'config.env') });
 
 const MAX_RETRIES = 5; // Maximum retry attempts
 
-const OtpError = async () => {
+const ShiprocketBankLoginError = async () => {
   let client = null;
   let attempts = 0;
 
   while (attempts < MAX_RETRIES) {
     try {
       attempts++;
-      console.log(`Attempt ${attempts} to process Otp Error stats...`);
+      console.log(`Attempt ${attempts} to process Shiprocket Bank Login Error stats...`);
 
       // Database connection setup
       const dbConfig = {
@@ -34,8 +34,8 @@ const OtpError = async () => {
         SELECT DISTINCT(org.orgId) AS org_id, org.channel
         FROM "fs-organisations-channels-db" AS org
         JOIN organisation AS i ON org.orgid = i.org_id 
-        WHERE 
-           isSyncDisabled IS NOT TRUE
+        WHERE org.channel = 'Shiprocketbank'
+          AND isSyncDisabled IS NOT TRUE 
           AND (isDisabled != TRUE OR isDisabled IS NULL)
           AND (isDisconnected != TRUE OR isDisconnected IS NULL);
       `;
@@ -44,38 +44,39 @@ const OtpError = async () => {
       const validOrgQueryRows = validOrgQueryResult.rows;
 
       if (validOrgQueryRows.length === 0) {
-        console.log('No valid orgIds found for Login Error.');
+        console.log('No valid orgIds found for Shiprocket Bank Login Error.');
         return;
       }
 
       const orgIds = validOrgQueryRows.map(row => row.org_id);
 
-      // Step 2: Otp Error Query
-      const otpErrorQuery = `
+      // Step 2: Login Error Query
+      const ShiprocketBankLoginErrorQuery = `
         SELECT requestid, orgid, channel, status, message, sources
         FROM "fs-sync-requests-db"
         WHERE 
           createdAt > (CURRENT_DATE - INTERVAL '1 day') + INTERVAL '18:30' 
           AND createdby='cron' 
           AND orgid = ANY($1)
-          AND (message like '%dashboard.auth.getFeaturesForSeller%')
-        ORDER BY createdAt ASC;
+          AND (sources->'8'->'0'->>'name' = 'SHIPROCKET_SETTLEMENT_AND_BANK_STATEMENT')
+          AND (sources->'8'->'0'->>'message' = 'Authentication failed')
+          ORDER BY createdAt ASC;
       `;
 
-      const otpErrorQueryResult = await client.query(otpErrorQuery, [orgIds]);
+      const ShiprocketBankLoginQueryResult = await client.query(ShiprocketBankLoginErrorQuery, [orgIds]);
 
       // Log results to the terminal
-      console.log(`OTP Error`);
-      console.table(otpErrorQueryResult.rows.map(row => ({
+      console.log(`Shiprocket Bank Login Error`);
+      console.table(ShiprocketBankLoginQueryResult.rows.map(row => ({
         OrgId: row.orgid,
-        Channel: row.channel
+        Channel: 'ShiprocketBank'
       })));
 
       // If successful, break out of the loop
       break;
 
     } catch (error) {
-      console.error(`Error occurred on attempt ${attempts}:`,error.message);
+      console.error(`Error occurred on attempt ${attempts}:`, error.message);
 
       if (attempts >= MAX_RETRIES) {
         console.error('Max retry attempts reached. Exiting process.');
@@ -93,4 +94,4 @@ const OtpError = async () => {
   }
 };
 
-module.exports = OtpError;
+module.exports = ShiprocketBankLoginError;

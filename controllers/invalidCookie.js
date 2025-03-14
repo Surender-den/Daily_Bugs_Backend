@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 const dotenv = require('dotenv');
 const path = require('path');
+const { request } = require('https');
 dotenv.config({ path: path.join(__dirname, '..', 'config', 'config.env') });
 
 const MAX_RETRIES = 5; // Maximum retry attempts
@@ -67,8 +68,10 @@ const invalidCookieError = async () => {
       // Log results to the terminal
       console.log(`invalidCookie Error`);
       console.table(invalidCookieQueryResult.rows.map(row => ({
+        requestid : row.requestid,
         OrgId: row.orgid,
-        Channel: row.channel
+        Channel: row.channel,
+        // requestid : row.requestid
       })));
 
       // If successful, break out of the loop

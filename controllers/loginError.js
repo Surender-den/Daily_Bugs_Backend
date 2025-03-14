@@ -58,7 +58,7 @@ const LoginError = async () => {
           createdAt > (CURRENT_DATE - INTERVAL '1 day') + INTERVAL '18:30' 
           AND createdby='cron' 
           AND orgid = ANY($1)
-          AND message::text LIKE '%auth.login%'
+          AND message::text LIKE '%.login%'
         ORDER BY createdAt ASC;
       `;
 
